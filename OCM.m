@@ -2,10 +2,10 @@
 % This function returns struct var and struct cost
 % var has 11 attributes
 % cost has 4 attributes
-% lb_tin and ub_tin are 24*1, gamma_pac is 24*24
+% lb_tin, ub_tin, r_S and r_W are 24*1, gamma_pac is 24*24
 % yzy 2020/12/21
 
-function [var, cost] = OCM(param, Tin_ref, Tout, Tin0, Pf_ref, Pc_ref, UBpre, Pil, Eb0)
+function [var, cost] = OCM(param, Tin_ref, Tout, Tin0, Pf_ref, Pc_ref, UBpre, Pil, theta, Eb0, D, M)
 
 %% User Model Variable Index
 idx = [];
@@ -31,7 +31,6 @@ idx_pg = [1:24] + length(idx); idx = [idx, idx_pg];
 
 % F. Aggregate Power Supply
 idx_pa = [1:24] + length(idx); idx = [idx, idx_pa];
-idx_pamax = 1 + length(idx); idx = [idx, idx_pamax];
 
 % G. Battery
 idx_eb = [1:24] + length(idx); idx = [idx, idx_eb];
@@ -47,6 +46,10 @@ idx_beta_W = 1 + length(idx); idx = [idx, idx_beta_W];
 
 % J. Battery Energy Investment
 idx_beta_B = 1 + length(idx); idx = [idx, idx_beta_B];
+
+% K. Operator Cost
+idx_po = [1:24] + length(idx); idx = [idx, idx_po];
+idx_pomax = 1 + length(idx); idx = [idx, idx_pomax];
 
 % Final Variable Length
 idx_len = length(idx);
@@ -85,12 +88,12 @@ LBpc = param.LBpc;
 
 % D. Renewable Power Supply Input Parameters
 
-% 7. UBpre % upper boundary of renewable energy
+% 7. UBpre % upper boundary of renewable energy 24*1
 % 8. Pil % inflexible load
+% 9. theta % renewable target percentage
 
 % E. Grid Power Supply Input Parameters
 
-gamma_pg = param.gamma_pg;
 UBpg = param.UBpg;
 LBpg = param.LBpg;
 
@@ -98,7 +101,8 @@ LBpg = param.LBpg;
 
 % G. Battery Input Parameters
 
-% 9. Eb0 % initial battery energy
+% 10. Eb0 % initial battery energy
+% 11. D % how many days do we observe
 
 UBpch = param.UBpch;
 LBpch = param.LBpch;
@@ -123,6 +127,12 @@ c_W = param.c_W; % investment cost of wind power per kW
 
 L_B = param.L_B; % life span energy per unit of invested battery capacity
 c_B = param.c_B; % investment cost of battery power per kW
+
+% K. Operator Cost
+
+% 12. M % the investment budget
+
+gamma_po = param.gamma_po;
 
 %% Air Conditioner Calculation
 
@@ -193,62 +203,36 @@ f_pc(idx_pc, 1) = -2*gamma_pc*Pc_ref; % Pc_ref
 lb_pc = ones(24,1)*LBpc; % param.LBpc
 ub_pc = ones(24,1)*UBpc; % param.UBpc
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Make changes
 %% Aggregate Power Supply Calculation
 
 % Cost Function
 pi1 = 0.2; pi2 = 0.8; % grid power price
-f_pg = zeros(idx_len,1);
-f_pg(idx_pg,1) = pi1*ones(24,1);
-f_pg(idx_pgmax,1) = pi2;
+f_po = zeros(idx_len,1);
+f_po(idx_po,1) = pi1*ones(24,1);
+f_po(idx_pomax,1) = pi2;
 
-% Constraint (7)
-lb_pg = zeros(24,1);
+% Constraint: calculation of po
+beq_po = zeros(24,1);
+
+Aeq_po = zeros(24, idx_len);
+Aeq_po(:,idx_po) = eye(24);
+Aeq_po(:,idx_pa) = -eye(24);
+% Here r_S and r_W are 24*1
+Aeq_po(:,idx_beta_S) = r_S;
+Aeq_po(:,idx_beta_W) = r_W;
+
+% Constraint: limit of pomax and po
+b_po = zeros(24,1);
+
+A_po = zeros(24, idx_len);
+A_po(:,idx_po) = eye(24);
+A_po(:,idx_pomax) = -ones(24,1);
+
+% Constraint: boundaries of pg
+lb_pg = ones(24,1)*LBpg; % param.LBpg
 ub_pg = ones(24,1)*UBpg; % param.UBpg
 
-% Constraint for idx_pgmax
-b_pg = zeros(24,1);
-
-A_pg = zeros(24, idx_len);
-A_pg(:,idx_pg) = eye(24);
-A_pg(:,idx_pgmax) = -ones(24,1);
-
-%% Grid Cost
-
-% Cost Function
-pi1 = 0.2; pi2 = 0.8; % grid power price
-f_pg = zeros(idx_len,1);
-f_pg(idx_pg,1) = pi1*ones(24,1);
-f_pg(idx_pgmax,1) = pi2;
-
-% Constraint (7)
-lb_pg = zeros(24,1);
-ub_pg = ones(24,1)*UBpg; % param.UBpg
-
-% Constraint for idx_pgmax
-b_pg = zeros(24,1);
-
-A_pg = zeros(24, idx_len);
-A_pg(:,idx_pg) = eye(24);
-A_pg(:,idx_pgmax) = -ones(24,1);
-
-%% Battery Cost Calculation
-
-% Cost Function
-eta_ch = 0.9;
-eta_dis = 0.9;
-
-H_pch = zeros(idx_len, idx_len);
-H_pch(idx_pch, idx_pch) = 2*gamma_eb*eye(24); % param.gamma_eb
-
-H_pdis = zeros(idx_len, idx_len);
-H_pdis(idx_pdis, idx_pdis) = 2*gamma_eb*eye(24);
-
-% f_eb = zeros(idx_len,1);
-% f_eb(idx_pch,1) = gamma_eb*ones(24,1);
-% f_eb(idx_pdis,1) = gamma_eb*ones(24,1);
-
-% Constraint (10)
+% Constraint: calculation of battery storage eb
 beq_eb = zeros(24,1);
 
 Aeq_eb = zeros(24, idx_len);
@@ -257,31 +241,36 @@ Aeq_eb(:,idx_pch) = -eta_ch*eye(24);
 Aeq_eb(:,idx_pdis) = 1/eta_dis*eye(24);
 Aeq_eb(1,idx_eb0) = -1;
 
-% initial battery storage
+% Constraint: initial battery storage eb0
 beq_eb0 = Eb0; % Eb0
 
 Aeq_eb0 = zeros(1,idx_len);
 Aeq_eb0(1,idx_eb0) = 1;
 
-% Constraint (11)
-lb_eb = zeros(24,1);
+% Constraint: boundaries of battery storage eb
+lb_eb = ones(24,1)*LBeb; % LBeb
 ub_eb = ones(24,1)*UBeb; % UBeb
 
-% Constraint (12)
-lb_pch = zeros(24,1);
+% Constraint: boundaries of pch
+lb_pch = ones(24,1)*LBpch; % param.LBpch
 ub_pch = ones(24,1)*UBpch; % param.UBpch
 
-% Constraint (13)
-lb_pdis = zeros(24,1);
+% Constraint: boundaries of pdis
+lb_pdis = ones(24,1)*LBpdis; % param.LBpdis
 ub_pdis = ones(24,1)*UBpdis; % param.UBpdis
 
-%% Renewable Energy
+% Constraint: battery life span pdis
+b_pdis = zeros(1,1);
 
-% Constraint (8)
+A_pdis = zeros(1, idx_len);
+A_pdis(:,idx_pdis) = D*ones(24,1); % D, the number of days we observe
+A_pdis(:,idx_beta_B) = -L_B;
+
+% Constraint: boundaries of pre
 lb_pre = zeros(24,1);
-ub_pre = UBre; % UBre
+ub_pre = UBpre; % UBpre
 
-% Constraint (17)
+% Constraint: calculation of pre
 beq_pre = Pil; % Pil, the inflexible load
 
 Aeq_pre = zeros(24, idx_len);
@@ -289,24 +278,46 @@ Aeq_pre(:,idx_pre) = eye(24);
 Aeq_pre(:,idx_pg) = eye(24);
 Aeq_pre(:,idx_pdis) = eye(24);
 Aeq_pre(:,idx_pac) = -eye(24);
-% Aeq_pre(:,idx_pf) = -eye(24);
+Aeq_pre(:,idx_pf) = -eye(24);
 Aeq_pre(:,idx_pch) = -eye(24);
 
-%% Optimization Setup: Eq(18)
-H = H_pch + H_pdis;
-f = f_z + f_pg + f_DR;
+% Constraint: renewable target pre
+b_pre = zeros(24,1);
 
-Aeq = [Aeq_pac; Aeq_tin0; Aeq_DR; Aeq_eb; Aeq_eb0; Aeq_pre];
-beq = [beq_pac; beq_tin0; beq_DR; beq_eb; beq_eb0; beq_pre];
+A_pre = zeros(1, idx_len);
+A_pre(:,idx_pre) = ones(24,1);
+A_pre(:,idx_pa) = -theta*ones(24,1);
 
-A = [A_z1; A_z2; A_pg];
-b = [b_z1; b_z2; b_pg];
+% Constraint: bugdet limit
+b_beta = M; % M, the total investment budget
+
+A_beta = zeros(1, idx_len);
+A_beta(:,idx_beta_S) = c_S*ones(1,1);
+A_beta(:,idx_beta_W) = c_W*ones(1,1);
+A_beta(:,idx_beta_B) = c_B*ones(1,1);
+
+% Constraint: boundaries of beta_S, beta_W, beta_B
+lb_beta_S = zeros(1,1);
+lb_beta_W = zeros(1,1);
+lb_beta_B = zeros(1,1);
+
+%% Optimization Setup
+
+H = H_pac + H_pc + H_pf;
+
+f = f_pac + f_pc + f_pf + f_po;
+
+Aeq = [Aeq_tin0; Aeq_pac; Aeq_pf; Aeq_pre; Aeq_eb; Aeq_eb0; Aeq_po];
+beq = [beq_tin0; beq_pac; beq_pf; beq_pre; beq_eb; beq_eb0; beq_po]; 
+
+A = [A_beta; A_pdis; A_po; A_pre];
+b = [b_beta; b_pdis; b_po; b_pre];
 
 ub = ones(idx_len,1) * 500;
 ub(idx_pac, 1) = ub_pac;
 ub(idx_tin, 1) = ub_tin;
-ub(idx_tref, 1) = ub_tref;
-% ub(idx_pf, 1) = ub_pf;
+ub(idx_pf, 1) = ub_pf;
+ub(idx_pc, 1) = ub_pc;
 ub(idx_pg, 1) = ub_pg;
 ub(idx_eb, 1) = ub_eb;
 ub(idx_pch, 1) = ub_pch;
@@ -316,9 +327,8 @@ ub(idx_pre, 1) = ub_pre;
 lb = zeros(idx_len, 1);
 lb(idx_pac, 1) = lb_pac;
 lb(idx_tin, 1) = lb_tin;
-lb(idx_tref, 1) = lb_tref;
-lb(idx_z, 1) = lb_z;
-% lb(idx_pf, 1) = lb_pf;
+lb(idx_pf, 1) = lb_pf;
+lb(idx_pc, 1) = lb_pc;
 lb(idx_pg, 1) = lb_pg;
 lb(idx_eb, 1) = lb_eb;
 lb(idx_pch, 1) = lb_pch;
@@ -331,45 +341,52 @@ if exitflag ~= 1
     fprintf('[Warning] emp does not converge\n');
 end
 
-%% Calculate the Var and Cost
+%% Calculate the Variable
 
-% Air Conditioner Var
-tin = p_user(idx_tin); var.tin = tin;
-tref = p_user(idx_tref); var.tref = tref;
+% A. Air Conditioner Var
 pac = p_user(idx_pac); var.pac = pac;
+tin = p_user(idx_tin); var.tin = tin;
 tin0 = p_user(idx_tin0); var.tin0 = tin0;
-z = p_user(idx_z); var.z = z;
-pdr = p_user(idx_pdr); var.pdr = pdr;
 
-% Flexible Load Var
-% pf = p_user(idx_pf); var.pf = pf;
+% B. Flexible Load Var
+pf = p_user(idx_pf); var.pf = pf;
 
-% Grid Cost Var
+% C. Curtailed Load Var
+pc = p_user(idx_pc); var.pc = pc;
+
+% D. Renewable Power Supply Var
+pre = p_user(idx_pre); var.pre = pre;
+
+% E. Grid Power Supply Var
 pg = p_user(idx_pg); var.pg = pg;
-pgmax = p_user(idx_pgmax); var.pgmax = pgmax;
 
-% Battery Var
+% F. Aggregate Power Supply
+pa = p_user(idx_pa); var.pa = pa;
+
+% G. Battery Var
 eb = p_user(idx_eb); var.eb = eb;
 eb0 = p_user(idx_eb0); var.eb0 = eb0;
 pch = p_user(idx_pch); var.pch = pch;
 pdis = p_user(idx_pdis); var.pdis = pdis;
 
-% Renewable Energy Var
-pre = p_user(idx_pre); var.pre = pre;
+% H. Solar Energy Investment Var
+beta_S = p_user(idx_beta_S); var.beta_S = beta_S;
 
-% Four Kinds of Cost
-cost_pac = sum(gamma_pac*z);
-% cost_pf = gamma_pf*(pf - Pref)'*(pf - Pref);
-cost_pg = gamma_pg*(pi1*sum(pg) + pi2*max(pg));
-cost_eb = gamma_eb*(sum(pch)+sum(pdis));
-reduction = -pi_DR*sum(pdr);
+% I. Wind Energy Investment Var
+beta_W = p_user(idx_beta_W); var.beta_W = beta_W;
 
-% cost.pac = cost_pac;
-% cost.pf  = cost_pf;
-% cost.pg = cost_pg;
-% cost.eb = cost_eb;
+% J. Battery Energy Investment Var
+beta_B = p_user(idx_beta_B); var.beta_B = beta_B;
 
-cost = [cost_pac; cost_pg; cost_eb; reduction];
+% K. Operator Cost
+po = p_user(idx_po); var.po = po;
+pomax = p_user(idx_pomax); var.pomax = pomax;
 
+%% Calculate the Four Kinds of Cost
 
+cost_pac = gamma_pac*(tin - Tin_ref)'*(tin - Tin_ref);
+cost_pf = gamma_pf*(pf - Pf_ref)'*(pf - Pf_ref);
+cost_pc = gamma_pc*(pc - Pc_ref)'*(pc - Pc_ref);
+cost_po = gamma_po*(pi1*sum(po) + pi2*max(po));
 
+cost = [cost_pac; cost_pf; cost_pc; cost_po];
