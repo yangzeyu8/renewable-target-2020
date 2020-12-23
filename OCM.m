@@ -50,6 +50,8 @@ idx_beta_B = 1 + length(idx); idx = [idx, idx_beta_B];
 % K. Operator Cost
 idx_po = [1:24] + length(idx); idx = [idx, idx_po];
 idx_pomax = 1 + length(idx); idx = [idx, idx_pomax];
+idx_z = [1:24] + length(idx); idx = [idx, idx_z];
+idx_zmax = 1 + length(idx); idx = [idx, idx_zmax];
 
 % Final Variable Length
 idx_len = length(idx);
@@ -208,8 +210,8 @@ ub_pc = ones(24,1)*UBpc; % param.UBpc
 % Cost Function
 pi1 = 0.2; pi2 = 0.8; % grid power price
 f_po = zeros(idx_len,1);
-f_po(idx_po,1) = pi1*ones(24,1);
-f_po(idx_pomax,1) = pi2;
+f_po(idx_z,1) = pi1*ones(24,1);
+f_po(idx_zmax,1) = pi2;
 
 % Constraint: calculation of po
 beq_po = zeros(24,1);
@@ -227,6 +229,27 @@ b_po = zeros(24,1);
 A_po = zeros(24, idx_len);
 A_po(:,idx_po) = eye(24);
 A_po(:,idx_pomax) = -ones(24,1);
+
+% Constraint: equivalent form z versus po, zmax versus pomax
+% po-z <= 0
+b_z = zeros(24,1);
+
+A_z = zeros(24, idx_len);
+A_z(:,idx_po) = eye(24);
+A_z(:,idx_z) = -eye(24);
+
+% z >= 0
+lb_z = zeros(24,1); 
+
+% pomax-zmax <= 0
+b_zmax = zeros(1,1);
+
+A_zmax = zeros(1, idx_len);
+A_zmax(:,idx_pomax) = eye(1);
+A_zmax(:,idx_zmax) = -eye(1);
+
+% zmax >= 0
+lb_zmax = zeros(1,1); 
 
 % Constraint: boundaries of pg
 lb_pg = ones(24,1)*LBpg; % param.LBpg
@@ -310,8 +333,8 @@ f = f_pac + f_pc + f_pf + f_po;
 Aeq = [Aeq_tin0; Aeq_pac; Aeq_pf; Aeq_pre; Aeq_eb; Aeq_eb0; Aeq_po];
 beq = [beq_tin0; beq_pac; beq_pf; beq_pre; beq_eb; beq_eb0; beq_po]; 
 
-A = [A_beta; A_pdis; A_po; A_pre];
-b = [b_beta; b_pdis; b_po; b_pre];
+A = [A_beta; A_pdis; A_po; A_z; A_zmax; A_pre];
+b = [b_beta; b_pdis; b_po; b_z; b_zmax; b_pre];
 
 ub = ones(idx_len,1) * 500;
 ub(idx_pac, 1) = ub_pac;
@@ -334,6 +357,8 @@ lb(idx_eb, 1) = lb_eb;
 lb(idx_pch, 1) = lb_pch;
 lb(idx_pdis, 1) = lb_pdis;
 lb(idx_pre, 1) = lb_pre;
+lb(idx_z, 1) = lb_z;
+lb(idx_zmax, 1) = lb_zmax;
 
 options = optimoptions('quadprog','Display','off');
 [p_user, fval, exitflag, output] = quadprog(H,f,A,b,Aeq,beq,lb,ub,[],options);
@@ -381,12 +406,17 @@ beta_B = p_user(idx_beta_B); var.beta_B = beta_B;
 % K. Operator Cost
 po = p_user(idx_po); var.po = po;
 pomax = p_user(idx_pomax); var.pomax = pomax;
+z = p_user(idx_z); var.z = z;
+zmax = p_user(idx_zmax); var.zmax = zmax;
 
 %% Calculate the Four Kinds of Cost
 
 cost_pac = gamma_pac*(tin - Tin_ref)'*(tin - Tin_ref);
 cost_pf = gamma_pf*(pf - Pf_ref)'*(pf - Pf_ref);
 cost_pc = gamma_pc*(pc - Pc_ref)'*(pc - Pc_ref);
-cost_po = gamma_po*(pi1*sum(po) + pi2*max(po));
+cost_po = gamma_po*(pi1*sum(z) + pi2*max(zmax));
 
 cost = [cost_pac; cost_pf; cost_pc; cost_po];
+
+
+
