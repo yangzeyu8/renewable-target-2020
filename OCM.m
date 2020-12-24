@@ -338,11 +338,25 @@ lb_beta_S = zeros(1,1);
 lb_beta_W = zeros(1,1);
 lb_beta_B = zeros(1,1);
 
+%% Calculation of Investment of Renewable Energy 
+
+% Cost Function: Solar Energy
+f_beta_S = zeros(idx_len, 1);
+f_beta_S(idx_beta_S, 1) = c_S;
+
+% Cost Function: Wind Energy
+f_beta_W = zeros(idx_len, 1);
+f_beta_W(idx_beta_W, 1) = c_W;
+
+% Cost Function: Battery Energy
+f_beta_B = zeros(idx_len, 1);
+f_beta_B(idx_beta_B, 1) = c_B;
+
 %% Optimization Setup
 
 H = H_pac + H_pc + H_pf;
 
-f = f_pac + f_pc + f_pf + f_po;
+f = f_pac + f_pc + f_pf + f_po + f_beta_S + f_beta_W + f_beta_B;
 
 Aeq = [Aeq_tin0; Aeq_pac; Aeq_pf; Aeq_pre; Aeq_eb; Aeq_eb0; Aeq_po];
 beq = [beq_tin0; beq_pac; beq_pf; beq_pre; beq_eb; beq_eb0; beq_po]; 
@@ -426,8 +440,11 @@ cost_pac = gamma_pac*(tin - Tin_ref)'*(tin - Tin_ref);
 cost_pf = gamma_pf*(pf - Pf_ref)'*(pf - Pf_ref);
 cost_pc = gamma_pc*(pc - Pc_ref)'*(pc - Pc_ref);
 cost_po = gamma_po*(pi1*sum(z) + pi2*max(zmax));
+cost_beta_S = gamma_po*c_S*beta_S;
+cost_beta_W = gamma_po*c_W*beta_W;
+cost_beta_B = gamma_po*c_B*beta_B;
 
-cost = [cost_pac; cost_pf; cost_pc; cost_po];
+cost = [cost_pac; cost_pf; cost_pc; cost_po; cost_beta_S; cost_beta_W; cost_beta_B];
 
 
 
