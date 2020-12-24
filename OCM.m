@@ -1,8 +1,8 @@
-% solver-based quadratic programming for Operating Cost Minimization (OCM)
+% Solver-based quadratic programming for Operating Cost Minimization (OCM)
 % This function returns struct var and struct cost
 % var has 11 attributes
 % cost has 4 attributes
-% lb_tin, ub_tin, r_S and r_W are 24*1, gamma_pac is 24*24
+% r_S and r_W are 24*1, gamma_pac is 24*24
 % yzy 2020/12/21
 
 function [var, cost] = OCM(param, Tin_ref, Tout, Tin0, Pf_ref, Pc_ref, UBpre, Pil, theta, Eb0, D, M)
@@ -168,7 +168,6 @@ lb_pac = ones(24,1)*LBpac; % param.LBpac
 ub_pac = ones(24,1)*UBpac; % param.UBpac
 
 % Constraint: boundaries of tin
-% Here lb_tin and ub_tin are 24*1
 lb_tin = LBtin; % param.LBtin
 ub_tin = UBtin; % param.UBtin
 
@@ -271,16 +270,31 @@ Aeq_eb0 = zeros(1,idx_len);
 Aeq_eb0(1,idx_eb0) = 1;
 
 % Constraint: boundaries of battery storage eb
+b_eb = zeros(24,1);
+
+A_eb = zeros(24, idx_len);
+A_eb(:, idx_eb) = eye(24);
+A_eb(:, idx_beta_B) = -UBeb*ones(24,1); % param.UBeb
+
 lb_eb = ones(24,1)*LBeb; % LBeb
-ub_eb = ones(24,1)*UBeb; % UBeb
 
 % Constraint: boundaries of pch
+b_pch = zeros(24,1);
+
+A_pch = zeros(24, idx_len);
+A_pch(:, idx_pch) = eye(24);
+A_pch(:, idx_beta_B) = -UBpch*ones(24,1); % param.UBpch
+
 lb_pch = ones(24,1)*LBpch; % param.LBpch
-ub_pch = ones(24,1)*UBpch; % param.UBpch
 
 % Constraint: boundaries of pdis
+b_pdis_beta = zeros(24,1);
+
+A_pdis_beta = zeros(24, idx_len);
+A_pdis_beta(:, idx_pdis) = eye(24);
+A_pdis_beta(:, idx_beta_B) = -UBpdis*ones(24,1); % param.UBpis
+
 lb_pdis = ones(24,1)*LBpdis; % param.LBpdis
-ub_pdis = ones(24,1)*UBpdis; % param.UBpdis
 
 % Constraint: battery life span pdis
 b_pdis = zeros(1,1);
@@ -333,18 +347,15 @@ f = f_pac + f_pc + f_pf + f_po;
 Aeq = [Aeq_tin0; Aeq_pac; Aeq_pf; Aeq_pre; Aeq_eb; Aeq_eb0; Aeq_po];
 beq = [beq_tin0; beq_pac; beq_pf; beq_pre; beq_eb; beq_eb0; beq_po]; 
 
-A = [A_beta; A_pdis; A_po; A_z; A_zmax; A_pre];
-b = [b_beta; b_pdis; b_po; b_z; b_zmax; b_pre];
+A = [A_beta; A_eb; A_pch; A_pdis_beta; A_pdis; A_po; A_z; A_zmax; A_pre];
+b = [b_beta; b_eb; b_pch; b_pdis_beta; b_pdis; b_po; b_z; b_zmax; b_pre];
 
-ub = ones(idx_len,1) * 500;
+ub = ones(idx_len,1) * 500000;
 ub(idx_pac, 1) = ub_pac;
 ub(idx_tin, 1) = ub_tin;
 ub(idx_pf, 1) = ub_pf;
 ub(idx_pc, 1) = ub_pc;
 ub(idx_pg, 1) = ub_pg;
-ub(idx_eb, 1) = ub_eb;
-ub(idx_pch, 1) = ub_pch;
-ub(idx_pdis, 1) = ub_pdis;
 ub(idx_pre, 1) = ub_pre;
 
 lb = zeros(idx_len, 1);
