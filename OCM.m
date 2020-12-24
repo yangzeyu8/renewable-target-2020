@@ -354,9 +354,9 @@ f_beta_B(idx_beta_B, 1) = c_B;
 
 %% Optimization Setup
 
-H = H_pac + H_pc + H_pf;
+H = D*(H_pac + H_pc + H_pf);
 
-f = f_pac + f_pc + f_pf + f_po + f_beta_S + f_beta_W + f_beta_B;
+f = D*(f_pac + f_pc + f_pf + f_po) + f_beta_S + f_beta_W + f_beta_B;
 
 Aeq = [Aeq_tin0; Aeq_pac; Aeq_pf; Aeq_pre; Aeq_eb; Aeq_eb0; Aeq_po];
 beq = [beq_tin0; beq_pac; beq_pf; beq_pre; beq_eb; beq_eb0; beq_po]; 
@@ -436,10 +436,10 @@ zmax = p_user(idx_zmax); var.zmax = zmax;
 
 %% Calculate the Four Kinds of Cost
 
-cost_pac = gamma_pac*(tin - Tin_ref)'*(tin - Tin_ref);
-cost_pf = gamma_pf*(pf - Pf_ref)'*(pf - Pf_ref);
-cost_pc = gamma_pc*(pc - Pc_ref)'*(pc - Pc_ref);
-cost_po = gamma_po*(pi1*sum(z) + pi2*max(zmax));
+cost_pac = D*gamma_pac*(tin - Tin_ref)'*(tin - Tin_ref);
+cost_pf = D*gamma_pf*(pf - Pf_ref)'*(pf - Pf_ref);
+cost_pc = D*gamma_pc*(pc - Pc_ref)'*(pc - Pc_ref);
+cost_po = D*gamma_po*(pi1*sum(z) + pi2*max(zmax));
 cost_beta_S = gamma_po*c_S*beta_S;
 cost_beta_W = gamma_po*c_W*beta_W;
 cost_beta_B = gamma_po*c_B*beta_B;
