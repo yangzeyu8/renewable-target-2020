@@ -15,7 +15,7 @@ idx_pf = [1:24*state] + length(idx); idx = [idx, idx_pf];
 %%% B. Curtailed Load (i, omega)
 idx_pc = [1:24*state] + length(idx); idx = [idx, idx_pc];
 %%% C. HVAC (i, omega)
-idx_tin = [1:24*state]; idx = [idx, idx_tin];
+idx_tin = [1:24*state] + length(idx); idx = [idx, idx_tin];
 idx_tin0 = [1:state] + length(idx); idx = [idx, idx_tin0];
 idx_pac = [1:24*state] + length(idx); idx = [idx, idx_pac];
 %%% D. Inflexible Load (input only)
