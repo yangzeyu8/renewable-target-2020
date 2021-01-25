@@ -38,7 +38,7 @@ for n = 1:num_user
     end
 end
 Pil = Pil - Pf_ref - Pc_ref;
-param.prob = [0.2 0.01369863 0.043835616 0.120547945 0.024657534 0.046575342 0.249315068 0.208219178 0.068493151 0.024657534];
+param.prob = [0.2000 0.0140 0.0440 0.12 0.025 0.0470 0.2490 0.2080 0.0680 0.0250];
 %%% A. Flexible Load (i, omega): param, Pf_ref
 param.gamma_pf = 0.3; 
 Pf_ref = mean(Pf_ref,3);
@@ -74,7 +74,7 @@ param.eb_rate_max = 10;
 param.pch_rate_max = 10;
 param.pdis_rate_max = 10;
 param.eb_rate_life = 100000;
-Eb0 = 0.1;
+Eb0 = 0;
 D = 365*10;
 %%% H. Aggregate Supply (omega): Pil
 %%% I. Operator Cost (omega): param
@@ -82,12 +82,13 @@ param.pi1 = 0.2; % 0.2
 param.pi2 = 0.8; % 0.8
 %%% J. Investment (operator): param, theta, Theta, M
 param.c_S = 1000;
-param.c_W = 1000;
-param.c_B = 1000;
-theta = 0.5;
+param.c_W = 300;
+param.c_B = 400;
+theta = 0.2;
 Theta = 0.1;
-M = 20*1000;
-
+M = num_user*2000;
+    
 %% total simulated 1 user
 [var, cost, invest] = solver(num_user, num_situation, param, Pf_ref, Pc_ref, Tin_ref, Tout, Tin0, Pil, Eb0, D, theta, Theta, M);
+
 save 'output/results.mat'
