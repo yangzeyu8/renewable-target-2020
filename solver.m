@@ -51,8 +51,13 @@ prob = param.prob;
 gamma_pf = param.gamma_pf; % coefficient of cost function
 %%% Constraint Equation (1): Sum of Flexible Load
 Aeq_pf = zeros(state,idx_len);
-for c = 1:state % for each state (one user in one situation)
-Aeq_pf(c,idx_pf(1+24*(c-1):24*c)) = ones(1,24);
+for s = 1:situation
+for i = 1:user
+c = user*(s-1)+i;
+start_idx = 1+24*(c-1);
+end_idx = 24*c;
+Aeq_pf(c,idx_pf(start_idx:end_idx)) = ones(1,24);
+end
 end
 Df = sum(Pf_ref)'; % all users
 beq_pf = repmat(Df,[situation,1]); % all users in each situation
@@ -62,8 +67,10 @@ f_pf = zeros(idx_len, 1);
 for s = 1:situation
 for i = 1:user
 c = user*(s-1)+i;
-H_pf(idx_pf((24*(c-1)+1):24*c), idx_pf((24*(c-1))+1:24*c)) = 2*gamma_pf*eye(24)*prob(s);
-f_pf(idx_pf((24*(c-1)+1):24*c), 1) = -2*gamma_pf*Pf_ref(:,i)*prob(s);
+start_idx = 1+24*(c-1);
+end_idx = 24*c;
+H_pf(idx_pf(start_idx:end_idx), idx_pf(start_idx:end_idx)) = 2*gamma_pf*eye(24)*prob(s);
+f_pf(idx_pf(start_idx:end_idx), 1) = -2*gamma_pf*Pf_ref(:,i)*prob(s);
 end
 end
 
@@ -81,31 +88,41 @@ f_pc = zeros(idx_len, 1);
 for s = 1:situation
 for i = 1:user
 c = user*(s-1)+i;
-H_pc(idx_pc((24*(c-1)+1):24*c), idx_pc((24*(c-1))+1:24*c)) = 2*gamma_pc*eye(24)*prob(s);
-f_pc(idx_pc((24*(c-1)+1):24*c), 1) = -2*gamma_pc*Pc_ref(:,i)*prob(s);
+start_idx = 1+24*(c-1);
+end_idx = 24*c;
+H_pc(idx_pc(start_idx:end_idx), idx_pc(start_idx:end_idx)) = 2*gamma_pc*eye(24)*prob(s);
+f_pc(idx_pc(start_idx:end_idx), 1) = -2*gamma_pc*Pc_ref(:,i)*prob(s);
 end
 end
 
 %% C. HVAC (i, omega)
 %%% Function Input: param, Tin_ref, Tout, Tin0
 gamma_pac = param.gamma_pac;
-LBtin = param.LBtin;
-UBtin = param.UBtin;
+LBtin = param.LBtin; % 15
+UBtin = param.UBtin; % 32
 C = param.C; % 3.3
 R = param.R; % 1.35
 eta_pac = param.eta_pac; % 7
 %%% Constraint Euqation (5): Indoor, Outdoor Temperature and HVAC
 a = (1 - 1/(C*R));  b = 1/(C*R);  d = eta_pac/C;
 Aeq_pac = zeros(24*state,idx_len);
-for c = 1:state 
-Aeq_pac((24*(c-1)+1):24*c,idx_tin(1+24*(c-1):24*c)) = eye(24) + diag(-a*ones(1,23),-1);
-Aeq_pac((24*(c-1)+1):24*c,idx_pac(1+24*(c-1):24*c)) = d*eye(24);
-Aeq_pac(1+24*(c-1),idx_tin0) = -a;
+for s = 1:situation
+for i = 1:user
+c = user*(s-1)+i; 
+start_idx = 1+24*(c-1);
+end_idx = 24*c;
+Aeq_pac(start_idx:end_idx,idx_tin(start_idx:end_idx)) = eye(24) + diag(-a*ones(1,23),-1);
+Aeq_pac(start_idx:end_idx,idx_pac(start_idx:end_idx)) = d*eye(24);
+Aeq_pac(start_idx,idx_tin0(c)) = -a;
+end
 end
 beq_pac = b*repmat(Tout,[state,1]);
 Aeq_tin0 = zeros(1*state,idx_len);
-for c = 1:state 
+for s = 1:situation
+for i = 1:user
+c = user*(s-1)+i;
 Aeq_tin0(c,idx_tin0(c)) = 1;
+end
 end
 beq_tin0 = repmat(Tin0,[state,1]); % Tin0
 %%% Constraint Equation (6): Boundaries of Indoor Tempature
@@ -117,8 +134,10 @@ f_pac = zeros(idx_len, 1);
 for s = 1:situation
 for i = 1:user
 c = user*(s-1)+i;
-H_pac(idx_tin((24*(c-1)+1):24*c), idx_tin((24*(c-1))+1:24*c)) = 2*gamma_pf*eye(24)*prob(s);
-f_pac(idx_tin((24*(c-1)+1):24*c), 1) = -2*gamma_pac*Tin_ref*ones(24,1)*prob(s);
+start_idx = 1+24*(c-1);
+end_idx = 24*c;
+H_pac(idx_tin(start_idx:end_idx), idx_tin(start_idx:end_idx)) = 2*gamma_pf*eye(24)*prob(s);
+f_pac(idx_tin(start_idx:end_idx), 1) = -2*gamma_pac*Tin_ref*ones(24,1)*prob(s);
 end
 end
 
@@ -134,9 +153,11 @@ r_W_max = max(r_W);
 %%% Constraint Equation (8~9): Boundaries of Renewable Energy
 A_pre_beta = zeros(24*situation, idx_len);
 for s = 1:situation
-A_pre_beta((1+24*(s-1)):24*s, idx_pre((1+24*(s-1)):24*s)) = eye(24);
-A_pre_beta((1+24*(s-1)):24*s,idx_beta_S) = -r_S_max(s);
-A_pre_beta((1+24*(s-1)):24*s,idx_beta_W) = -r_W_max(s);
+start_idx = 1+24*(s-1);
+end_idx = 24*s;
+A_pre_beta(start_idx:end_idx, idx_pre(start_idx:end_idx)) = eye(24);
+A_pre_beta(start_idx:end_idx, idx_beta_S) = -r_S(:,s);
+A_pre_beta(start_idx:end_idx, idx_beta_W) = -r_W(:,s);
 end
 b_pre_beta = zeros(24*situation,1);
 
@@ -159,42 +180,54 @@ eb_rate_life = param.eb_rate_life;
 %%% Constraint Equation (11): Energy Storage versus Charge/Discharge
 Aeq_eb = zeros(24*situation, idx_len);
 for s = 1:situation
-Aeq_eb((1+24*(s-1)):24*s, idx_eb((1+24*(s-1)):24*s)) = eye(24) + diag(-ones(1,23), -1);
-Aeq_eb((1+24*(s-1)):24*s, idx_pch((1+24*(s-1)):24*s)) = -eta_ch*eye(24);
-Aeq_eb((1+24*(s-1)):24*s, idx_pdis((1+24*(s-1)):24*s)) = 1/eta_dis*eye(24);
-Aeq_eb((1+24*(s-1)), idx_eb0(s)) = -1;
+start_idx = 1+24*(s-1);
+end_idx = 24*s;
+Aeq_eb(start_idx:end_idx, idx_eb(start_idx:end_idx)) = eye(24) + diag(-ones(1,23), -1);
+Aeq_eb(start_idx:end_idx, idx_pch(start_idx:end_idx)) = -eta_ch*eye(24);
+Aeq_eb(start_idx:end_idx, idx_pdis(start_idx:end_idx)) = 1/eta_dis*eye(24);
+Aeq_eb(start_idx, idx_eb0(s)) = -1;
 end
 beq_eb = zeros(24*situation,1);
 Aeq_eb0 = zeros(situation,idx_len);
-Aeq_eb0(:,idx_eb0) = 1;
+for s = 1:situation
+Aeq_eb0(s,idx_eb0(s)) = 1;
+end
 beq_eb0 = repmat(Eb0,[situation,1]); 
 %%% Constraint Equation (12): Boundaries of Battery Storage
 A_eb = zeros(24*situation, idx_len);
 for s = 1:situation
-A_eb((1+24*(s-1)):24*s, idx_eb((1+24*(s-1)):24*s)) = eye(24);
-A_eb((1+24*(s-1)):24*s,idx_beta_B) = eb_rate_max;
+start_idx = 1+24*(s-1);
+end_idx = 24*s;
+A_eb(start_idx:end_idx, idx_eb(start_idx:end_idx)) = eye(24);
+A_eb(start_idx:end_idx, idx_beta_B) = -eb_rate_max;
 end
 b_eb = zeros(24*situation,1);
 %%% Constraint Equation (13): Boundaries of Charging Power
 A_pch = zeros(24*situation, idx_len);
 for s = 1:situation
-A_pch((1+24*(s-1)):24*s, idx_pch((1+24*(s-1)):24*s)) = eye(24);
-A_pch((1+24*(s-1)):24*s,idx_beta_B) = pch_rate_max;
+start_idx = 1+24*(s-1);
+end_idx = 24*s;
+A_pch(start_idx:end_idx, idx_pch(start_idx:end_idx)) = eye(24);
+A_pch(start_idx:end_idx, idx_beta_B) = -pch_rate_max;
 end
 b_pch = zeros(24*situation,1);
 %%% Constraint Equation (14): Boundaries of Discharging Power
 A_pdis = zeros(24*situation, idx_len);
 for s = 1:situation
-A_pdis((1+24*(s-1)):24*s, idx_pdis((1+24*(s-1)):24*s)) = eye(24);
-A_pdis((1+24*(s-1)):24*s,idx_beta_B) = pdis_rate_max;
+start_idx = 1+24*(s-1);
+end_idx = 24*s;
+A_pdis(start_idx:end_idx, idx_pdis(start_idx:end_idx)) = eye(24);
+A_pdis(start_idx:end_idx, idx_beta_B) = -pdis_rate_max;
 end
 b_pdis = zeros(24*situation,1);
 %%% Constraint Equation (15): Battery Lifespan Limit
 A_eb_L  = zeros(1, idx_len);
 for s = 1:situation
-A_eb_L(1, idx_pdis((1+24*(s-1)):24*s)) = ones(1,24)*prob(s)*D;
-A_eb_L(1, idx_beta_B) = -eb_rate_life;
+start_idx = 1+24*(s-1);
+end_idx = 24*s;
+A_eb_L(1, idx_pdis(start_idx:end_idx)) = ones(1,24)*prob(s)*D;
 end
+A_eb_L(1, idx_beta_B) = -eb_rate_life;
 b_eb_L = zeros(1,1);
 
 %% H. Aggregate Supply (omega)
@@ -202,21 +235,27 @@ b_eb_L = zeros(1,1);
 %%% Constraint Equation (16): Power Balance
 Aeq_balance = zeros(24*situation, idx_len);
 for s = 1:situation
-Aeq_balance((1+24*(s-1)):24*s, idx_pre((1+24*(s-1)):24*s)) = eye(24);
-Aeq_balance((1+24*(s-1)):24*s, idx_pg((1+24*(s-1)):24*s)) = eye(24);
-Aeq_balance((1+24*(s-1)):24*s, idx_pdis((1+24*(s-1)):24*s)) = eye(24);
-Aeq_balance((1+24*(s-1)):24*s, idx_pch((1+24*(s-1)):24*s)) = -eye(24);
-Aeq_balance((1+24*(s-1)):24*s, idx_pf((1+24*user*(s-1)):24*user*s)) = -repmat(eye(24),[1,user]);
-Aeq_balance((1+24*(s-1)):24*s, idx_pc((1+24*user*(s-1)):24*user*s)) = -repmat(eye(24),[1,user]);
-Aeq_balance((1+24*(s-1)):24*s, idx_pac((1+24*user*(s-1)):24*user*s)) = -repmat(eye(24),[1,user]);
+start_idx = 1+24*(s-1);
+end_idx = 24*s;
+start_user_idx = 1+24*(s-1)*user;
+end_user_idx = 24*s*user;
+Aeq_balance(start_idx:end_idx, idx_pre(start_idx:end_idx)) = eye(24);
+Aeq_balance(start_idx:end_idx, idx_pg(start_idx:end_idx)) = eye(24);
+Aeq_balance(start_idx:end_idx, idx_pdis(start_idx:end_idx)) = eye(24);
+Aeq_balance(start_idx:end_idx, idx_pch(start_idx:end_idx)) = -eye(24);
+Aeq_balance(start_idx:end_idx, idx_pf(start_user_idx:end_user_idx)) = -repmat(eye(24),[1,user]);
+Aeq_balance(start_idx:end_idx, idx_pc(start_user_idx:end_user_idx)) = -repmat(eye(24),[1,user]);
+Aeq_balance(start_idx:end_idx, idx_pac(start_user_idx:end_user_idx)) = -repmat(eye(24),[1,user]);
 end
 beq_balance = repmat(sum(Pil, 2),[situation,1]);
 %%% Constraint Equation (17~18): Aggregate Supply Calculation
 Aeq_pa = zeros(24*situation, idx_len);
 for s = 1:situation
-Aeq_pa((1+24*(s-1)):24*s,idx_pa((1+24*(s-1)):24*s)) = eye(24);
-Aeq_pa((1+24*(s-1)):24*s,idx_pre((1+24*(s-1)):24*s)) = -eye(24);
-Aeq_pa((1+24*(s-1)):24*s,idx_pg((1+24*(s-1)):24*s)) = -eye(24);    
+start_idx = 1+24*(s-1);
+end_idx = 24*s;
+Aeq_pa(start_idx:end_idx,idx_pa(start_idx:end_idx)) = eye(24);
+Aeq_pa(start_idx:end_idx,idx_pre(start_idx:end_idx)) = -eye(24);
+Aeq_pa(start_idx:end_idx,idx_pg(start_idx:end_idx)) = -eye(24);    
 end
 beq_pa = zeros(24*situation,1);
 
@@ -227,25 +266,31 @@ pi2 = param.pi2; % 0.8
 %%% Invisible Constraint: Calculation of Operation Power
 Aeq_po = zeros(24*situation, idx_len);
 for s = 1:situation
-Aeq_po((1+24*(s-1)):24*s, idx_po((1+24*(s-1)):24*s)) = eye(24);
-Aeq_po((1+24*(s-1)):24*s, idx_pa((1+24*(s-1)):24*s)) = -eye(24);
-Aeq_po((1+24*(s-1)):24*s, idx_beta_S) = r_S(:,s);
-Aeq_po((1+24*(s-1)):24*s, idx_beta_W) = r_W(:,s);
+start_idx = 1+24*(s-1);
+end_idx = 24*s;
+Aeq_po(start_idx:end_idx, idx_po(start_idx:end_idx)) = eye(24);
+Aeq_po(start_idx:end_idx, idx_pa(start_idx:end_idx)) = -eye(24);
+Aeq_po(start_idx:end_idx, idx_beta_S) = r_S(:,s);
+Aeq_po(start_idx:end_idx, idx_beta_W) = r_W(:,s);
 end
 beq_po = zeros(24*situation,1);
 %%% Invisible Constraint: Maximum of Operation Power
 A_po = zeros(24*situation, idx_len);
 for s = 1:situation
-A_po((1+24*(s-1)):24*s,idx_po((1+24*(s-1)):24*s)) = eye(24);
-A_po((1+24*(s-1)):24*s,idx_pomax(s)) = -ones(24,1);
+start_idx = 1+24*(s-1);
+end_idx = 24*s;
+A_po(start_idx:end_idx,idx_po(start_idx:end_idx)) = eye(24);
+A_po(start_idx:end_idx,idx_pomax(s)) = -ones(24,1);
 end
 b_po = zeros(24*situation,1);
 %%% Invisible Constraint: Equivilent Form of Operation Power
 %%%% po-z <= 0 and z>=0
 A_z = zeros(24*situation, idx_len);
 for s = 1:situation
-A_z((1+24*(s-1)):24*s,idx_po((1+24*(s-1)):24*s)) = eye(24);
-A_z((1+24*(s-1)):24*s,idx_z((1+24*(s-1)):24*s)) = -eye(24);
+start_idx = 1+24*(s-1);
+end_idx = 24*s;
+A_z(start_idx:end_idx,idx_po(start_idx:end_idx)) = eye(24);
+A_z(start_idx:end_idx,idx_z(start_idx:end_idx)) = -eye(24);
 end
 b_z = zeros(24*situation,1); 
 %%%% pomax-zmax <= 0 and zmax>=0
@@ -258,7 +303,9 @@ b_zmax = zeros(1*situation,1);
 %%% Cost Function Equation (19): Cost of Operator
 f_po = zeros(idx_len,1);
 for s = 1:situation
-f_po(idx_z((1+24*(s-1)):24*s), 1) = pi1*ones(24,1)*prob(s);
+start_idx = 1+24*(s-1);
+end_idx = 24*s;
+f_po(idx_z(start_idx:end_idx), 1) = pi1*ones(24,1)*prob(s);
 f_po(idx_zmax(s), 1) = pi2*prob(s);
 end
 
@@ -270,10 +317,12 @@ c_B = param.c_B;
 %%% Constraint Equation (20): Renewable Energy Target
 A_pre = zeros(1, idx_len);
 for s = 1:situation
-A_pre(1,idx_pa((1+24*(s-1)):24*s)) = theta*ones(1,24)*prob(s);
-A_pre(1,idx_pre((1+24*(s-1)):24*s)) = -ones(1,24)*prob(s);
-A_pre(1,idx_pg((1+24*(s-1)):24*s)) = -Theta*ones(1,24)*prob(s);
-end    
+start_idx = 1+24*(s-1);
+end_idx = 24*s;
+A_pre(1,idx_pa(start_idx:end_idx)) = theta*ones(1,24)*prob(s);
+A_pre(1,idx_pre(start_idx:end_idx)) = -ones(1,24)*prob(s);
+A_pre(1,idx_pg(start_idx:end_idx)) = -Theta*ones(1,24)*prob(s);
+end
 b_pre = zeros(1,1);
 %%% Cost Function Equation (21): Investment of Renewable Energy
 f_beta = zeros(idx_len,1);
@@ -282,9 +331,9 @@ f_beta(idx_beta_W, 1) = c_W;
 f_beta(idx_beta_B, 1) = c_B;
 %%% Constraint Equation (24~25): Budget Limit
 A_beta = zeros(1, idx_len);
-A_beta(1,idx_beta_S) = c_S*ones(1,1);
-A_beta(1,idx_beta_W) = c_W*ones(1,1);
-A_beta(1,idx_beta_B) = c_B*ones(1,1);
+A_beta(1, idx_beta_S) = c_S*ones(1,1);
+A_beta(1, idx_beta_W) = c_W*ones(1,1);
+A_beta(1, idx_beta_B) = c_B*ones(1,1);
 b_beta = M; 
 
 %% Optimization Setup
@@ -294,7 +343,7 @@ beq = [beq_pf; beq_pac; beq_tin0; beq_eb; beq_eb0; beq_balance; beq_pa; beq_po];
 A = [A_pre_beta; A_eb; A_pch; A_pdis; A_eb_L; A_po; A_z; A_zmax; A_pre; A_beta];
 b = [b_pre_beta; b_eb; b_pch; b_pdis; b_eb_L; b_po; b_z; b_zmax; b_pre; b_beta];
 %%% Upper Boundaries
-ub = ones(idx_len,1) * 500000;
+ub = ones(idx_len,1) * 500;
 ub(idx_pc, 1) = ub_pc;
 ub(idx_tin, 1) = ub_tin;
 ub(idx_pg, 1) = ub_pg;
