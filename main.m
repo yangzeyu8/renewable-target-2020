@@ -88,6 +88,7 @@ theta = 0.2;
 Theta = 0.1;
 M = num_user*2000;
     
-%% Total Simulated 10 Users
+%% total simulated 1 user
 [var, cost, invest] = solver(num_user, num_situation, param, Pf_ref, Pc_ref, Tin_ref, Tout, Tin0, Pil, Eb0, D, theta, Theta, M);
+
 save 'output/results.mat'
