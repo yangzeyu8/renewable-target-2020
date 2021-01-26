@@ -406,6 +406,6 @@ cost_pc(s) = D*gamma_pc*prob(s)*(pc((1+24*user*(s-1)):24*user*s) - Pc_ref(:))'*(
 cost_pac(s) = D*gamma_pac*prob(s)*(tin((1+24*user*(s-1)):24*user*s) - ones(24*user,1)*Tin_ref)'*(tin((1+24*user*(s-1)):24*user*s) - ones(24*user,1)*Tin_ref);
 cost_po(s) = D*gamma_pac*prob(s)*(pi1*sum(z((1+24*(s-1)):24*s)) + pi2*sum(zmax(s)));
 end    
-invest = c_S*beta_S + c_W*beta_W + c_B*beta_B;
+invest = [c_S*beta_S; c_W*beta_W; c_B*beta_B];
 cost = [cost_pf; cost_pc; cost_pac; cost_po];
 
