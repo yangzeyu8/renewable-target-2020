@@ -408,4 +408,3 @@ cost_po(s) = D*gamma_pac*prob(s)*(pi1*sum(z((1+24*(s-1)):24*s)) + pi2*sum(zmax(s
 end    
 invest = [c_S*beta_S; c_W*beta_W; c_B*beta_B];
 cost = [cost_pf; cost_pc; cost_pac; cost_po];
-
