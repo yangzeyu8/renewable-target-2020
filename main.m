@@ -40,20 +40,20 @@ end
 Pil = Pil - Pf_ref - Pc_ref;
 param.prob = [0.2000 0.0140 0.0440 0.12 0.025 0.0470 0.2490 0.2080 0.0680 0.0250];
 %%% A. Flexible Load (i, omega): param, Pf_ref
-param.gamma_pf = 0.3; 
+param.gamma_pf = 1; 
 Pf_ref = mean(Pf_ref,3);
 %%% B. Curtailed Load (i, omega): param, Pc_ref
-param.gamma_pc = 0.4; 
+param.gamma_pc = 1; 
 param.LBpc = 0; 
 param.UBpc = 7; 
 Pc_ref = mean(Pc_ref,3);
 %%% C. HVAC (i, omega): param, Tin_ref, Tout, Tin0
-param.gamma_pac = 0.5; 
+param.gamma_pac = 1; 
 param.LBtin = 15; 
 param.UBtin = 32;
 param.C = 3.3;
-param.R = 1.35;
-param.eta_pac = 7;
+param.R = 1.35*2;
+param.eta_pac = 7*2;
 Tin_ref = 24;
 Tout = temperature(); % Read temperature data: 9/6~9/12 2016 at Austin
 Tin0 = 23;
@@ -81,14 +81,14 @@ D = 365*10;
 param.pi1 = 0.2; % 0.2
 param.pi2 = 0.8; % 0.8
 %%% J. Investment (operator): param, theta, Theta, M
-param.c_S = 1000;
-param.c_W = 300;
+param.c_S = 950;
+param.c_W = 200;
 param.c_B = 400;
-theta = 0.2;
-Theta = 0.1;
-M = num_user*2000;
+theta = 0.5;
+Theta = 0.05;
+M = num_user*30000;
     
 %% total simulated 1 user
 [var, cost, invest] = solver(num_user, num_situation, param, Pf_ref, Pc_ref, Tin_ref, Tout, Tin0, Pil, Eb0, D, theta, Theta, M);
-
-save 'output/results.mat'
+save 'output/target50/results.mat'
+visualization
