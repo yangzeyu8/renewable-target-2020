@@ -4,7 +4,7 @@
 %% Initialization
 %%% Read Results
 close all; clear;
-load output/target50/results.mat
+load output/target0/results.mat
 state = num_user*num_situation;
 user = num_user;
 situation = num_situation;
@@ -34,13 +34,13 @@ xlabel('Date', 'FontName', 'Helvetica', 'FontSize', 16);
 ylabel('Flexible Load Consumption (kWh)','FontName', 'Helvetica', 'FontSize', 14)
 set(gca,'Box','on','TickDir','in','TickLength',[.01 .01],'XMinorTick','on', ...
     'YMinorTick','off','YGrid','on','XGrid','off','LineWidth',1);
-h = legend({'user 1', 'user 2', 'user 3', 'user 4', 'user 5', 'user 6', 'user 7', 'user 8', 'user 9', 'user 10'} ...
+h = legend({'user 1', 'user 2', 'user 3'} ...
     , 'Location', 'northoutside', 'Orientation','horizontal',"NumColumns",5); 
 set(h,'FontName', 'Helvetica', 'FontSize', 12);
 ax = gca;
 ax.XAxis.MinorTick = 'on';
 ax.XAxis.MinorTickValues = 2:167;
-saveas(fig, './figs/target50/pf.pdf')
+saveas(fig, './figs/target0/pf.pdf')
 
 %% B. Curtailed Load (i, omega)
 x = zeros(24, user, situation);
@@ -67,13 +67,13 @@ xlabel('Date', 'FontName', 'Helvetica', 'FontSize', 16);
 ylabel('Curtailed Load Consumption (kWh)','FontName', 'Helvetica', 'FontSize', 14)
 set(gca,'Box','on','TickDir','in','TickLength',[.01 .01],'XMinorTick','on', ...
     'YMinorTick','off','YGrid','on','XGrid','off','LineWidth',1);
-h = legend({'user 1', 'user 2', 'user 3', 'user 4', 'user 5', 'user 6', 'user 7', 'user 8', 'user 9', 'user 10'} ...
+h = legend({'user 1', 'user 2', 'user 3'} ...
     , 'Location', 'northoutside', 'Orientation','horizontal',"NumColumns",5); 
 set(h,'FontName', 'Helvetica', 'FontSize', 12);
 ax = gca;
 ax.XAxis.MinorTick = 'on';
 ax.XAxis.MinorTickValues = 2:167;
-saveas(fig, './figs/target50/pc.pdf')
+saveas(fig, './figs/target0/pc.pdf')
 
 %% C. HVAC (i, omega)
 %%% HVAC Power
@@ -101,13 +101,13 @@ xlabel('Date', 'FontName', 'Helvetica', 'FontSize', 16);
 ylabel('HVAC Consumption (kWh)','FontName', 'Helvetica', 'FontSize', 14)
 set(gca,'Box','on','TickDir','in','TickLength',[.01 .01],'XMinorTick','on', ...
     'YMinorTick','off','YGrid','on','XGrid','off','LineWidth',1);
-h = legend({'user 1', 'user 2', 'user 3', 'user 4', 'user 5', 'user 6', 'user 7', 'user 8', 'user 9', 'user 10'} ...
+h = legend({'user 1', 'user 2', 'user 3'} ...
     , 'Location', 'northoutside', 'Orientation','horizontal',"NumColumns",5); 
 set(h,'FontName', 'Helvetica', 'FontSize', 12);
 ax = gca;
 ax.XAxis.MinorTick = 'on';
 ax.XAxis.MinorTickValues = 2:167;
-saveas(fig, './figs/target50/pac.pdf')
+saveas(fig, './figs/target0/pac.pdf')
 %%% Indoor Temperature
 x = zeros(24, user, situation);
 y = var.tin;
@@ -133,13 +133,13 @@ xlabel('Date', 'FontName', 'Helvetica', 'FontSize', 16);
 ylabel('Indoor Temperature (\circC)','FontName', 'Helvetica', 'FontSize', 14)
 set(gca,'Box','on','TickDir','in','TickLength',[.01 .01],'XMinorTick','on', ...
     'YMinorTick','off','YGrid','on','XGrid','off','LineWidth',1);
-h = legend({'user 1', 'user 2', 'user 3', 'user 4', 'user 5', 'user 6', 'user 7', 'user 8', 'user 9', 'user 10'} ...
+h = legend({'user 1', 'user 2', 'user 3'} ...
     , 'Location', 'northoutside', 'Orientation','horizontal',"NumColumns",5); 
 set(h,'FontName', 'Helvetica', 'FontSize', 12);
 ax = gca;
 ax.XAxis.MinorTick = 'on';
 ax.XAxis.MinorTickValues = 2:167;
-saveas(fig, './figs/target50/tin.pdf')
+saveas(fig, './figs/target0/tin.pdf')
 
 %% D. Inflexible Load (input only)
 
@@ -170,7 +170,7 @@ set(h,'FontName', 'Helvetica', 'FontSize', 12);
 ax = gca;
 ax.XAxis.MinorTick = 'on';
 ax.XAxis.MinorTickValues = 2:167;
-saveas(fig, './figs/target50/pre.pdf')
+saveas(fig, './figs/target0/pre.pdf')
 
 %% F. Power Grid (omega)
 x = zeros(24, situation);
@@ -199,7 +199,7 @@ set(h,'FontName', 'Helvetica', 'FontSize', 12);
 ax = gca;
 ax.XAxis.MinorTick = 'on';
 ax.XAxis.MinorTickValues = 2:167;
-saveas(fig, './figs/target50/pg.pdf')
+saveas(fig, './figs/target0/pg.pdf')
 
 %% G. Battery (omega)
 %%% Battery
@@ -229,7 +229,7 @@ set(h,'FontName', 'Helvetica', 'FontSize', 12);
 ax = gca;
 ax.XAxis.MinorTick = 'on';
 ax.XAxis.MinorTickValues = 2:167;
-saveas(fig, './figs/target50/eb.pdf')
+saveas(fig, './figs/target0/eb.pdf')
 %%% Charge
 x = zeros(24, situation);
 y = var.pch;
@@ -257,7 +257,7 @@ set(h,'FontName', 'Helvetica', 'FontSize', 12);
 ax = gca;
 ax.XAxis.MinorTick = 'on';
 ax.XAxis.MinorTickValues = 2:167;
-saveas(fig, './figs/target50/pch.pdf')
+saveas(fig, './figs/target0/pch.pdf')
 %%% Discharge
 x = zeros(24, situation);
 y = var.pdis;
@@ -285,7 +285,7 @@ set(h,'FontName', 'Helvetica', 'FontSize', 12);
 ax = gca;
 ax.XAxis.MinorTick = 'on';
 ax.XAxis.MinorTickValues = 2:167;
-saveas(fig, './figs/target50/pdis.pdf')
+saveas(fig, './figs/target0/pdis.pdf')
 
 %% H. Aggregate Supply (omega)
 x = zeros(24, situation);
@@ -314,7 +314,7 @@ set(h,'FontName', 'Helvetica', 'FontSize', 12);
 ax = gca;
 ax.XAxis.MinorTick = 'on';
 ax.XAxis.MinorTickValues = 2:167;
-saveas(fig, './figs/target50/pa.pdf')
+saveas(fig, './figs/target0/pa.pdf')
 
 %% I. Operator Cost (omega)
 x = zeros(24, situation);
@@ -343,7 +343,7 @@ set(h,'FontName', 'Helvetica', 'FontSize', 12);
 ax = gca;
 ax.XAxis.MinorTick = 'on';
 ax.XAxis.MinorTickValues = 2:167;
-saveas(fig, './figs/target50/po.pdf')
+saveas(fig, './figs/target0/po.pdf')
 
 %% J. Investment (operator)
 fig = figure();
@@ -359,4 +359,4 @@ x = categorical({'Solar Investment','Wind Investment','Battery Investment'});
 x = reordercats(x,{'Solar Investment','Wind Investment','Battery Investment'});
 y = invest;
 bar(x,y)
-saveas(fig, './figs/target50/invest.pdf')
+saveas(fig, './figs/target0/invest.pdf')
