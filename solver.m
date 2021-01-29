@@ -137,7 +137,7 @@ c = user*(s-1)+i;
 start_idx = 1+24*(c-1);
 end_idx = 24*c;
 H_pac(idx_tin(start_idx:end_idx), idx_tin(start_idx:end_idx)) = 2*gamma_pf*eye(24)*prob(s);
-f_pac(idx_tin(start_idx:end_idx), 1) = -2*gamma_pac*Tin_ref*ones(24,1)*prob(s);
+f_pac(idx_tin(start_idx:end_idx), 1) = -2*gamma_pac*Tin_ref(i)*ones(24,1)*prob(s);
 end
 end
 
@@ -148,8 +148,6 @@ end
 %%% Function Input: param
 r_S = param.r_S;
 r_W = param.r_W;
-r_S_max = max(r_S);
-r_W_max = max(r_W);
 %%% Constraint Equation (8~9): Boundaries of Renewable Energy
 A_pre_beta = zeros(24*situation, idx_len);
 for s = 1:situation
@@ -173,6 +171,7 @@ ub_pg = UBpg;
 %%% Function Input: param, Eb0, D
 eta_ch = param.eta_ch; % 0.9
 eta_dis = param.eta_dis; % 0.9
+eb_rate_min = param.eb_rate_min;
 eb_rate_max = param.eb_rate_max;
 pch_rate_max = param.pch_rate_max;
 pdis_rate_max = param.pdis_rate_max;
@@ -194,14 +193,23 @@ Aeq_eb0(s,idx_eb0(s)) = 1;
 end
 beq_eb0 = repmat(Eb0,[situation,1]); 
 %%% Constraint Equation (12): Boundaries of Battery Storage
-A_eb = zeros(24*situation, idx_len);
+A_eb_max = zeros(24*situation, idx_len);
 for s = 1:situation
 start_idx = 1+24*(s-1);
 end_idx = 24*s;
-A_eb(start_idx:end_idx, idx_eb(start_idx:end_idx)) = eye(24);
-A_eb(start_idx:end_idx, idx_beta_B) = -eb_rate_max;
+A_eb_max(start_idx:end_idx, idx_eb(start_idx:end_idx)) = eye(24);
+A_eb_max(start_idx:end_idx, idx_beta_B) = -eb_rate_max;
 end
-b_eb = zeros(24*situation,1);
+b_eb_max = zeros(24*situation,1);
+A_eb_min = zeros(24*situation, idx_len);
+for s = 1:situation
+start_idx = 1+24*(s-1);
+end_idx = 24*s;
+A_eb_min(start_idx:end_idx, idx_eb(start_idx:end_idx)) = -eye(24);
+A_eb_min(start_idx:end_idx, idx_beta_B) = eb_rate_min;
+end
+b_eb_min = zeros(24*situation,1);
+
 %%% Constraint Equation (13): Boundaries of Charging Power
 A_pch = zeros(24*situation, idx_len);
 for s = 1:situation
@@ -340,8 +348,8 @@ b_beta = M;
 %%% Relations
 Aeq = [Aeq_pf; Aeq_pac; Aeq_tin0; Aeq_eb; Aeq_eb0; Aeq_balance; Aeq_pa; Aeq_po];
 beq = [beq_pf; beq_pac; beq_tin0; beq_eb; beq_eb0; beq_balance; beq_pa; beq_po]; 
-A = [A_pre_beta; A_eb; A_pch; A_pdis; A_eb_L; A_po; A_z; A_zmax; A_pre; A_beta];
-b = [b_pre_beta; b_eb; b_pch; b_pdis; b_eb_L; b_po; b_z; b_zmax; b_pre; b_beta];
+A = [A_pre_beta; A_eb_max; A_eb_min; A_pch; A_pdis; A_eb_L; A_po; A_z; A_zmax; A_pre; A_beta];
+b = [b_pre_beta; b_eb_max; b_eb_min; b_pch; b_pdis; b_eb_L; b_po; b_z; b_zmax; b_pre; b_beta];
 %%% Upper Boundaries
 ub = ones(idx_len,1) * 500;
 ub(idx_pc, 1) = ub_pc;
@@ -403,8 +411,9 @@ cost_po = zeros(1, situation);
 for s = 1:situation
 cost_pf(s) = D*gamma_pf*prob(s)*(pf((1+24*user*(s-1)):24*user*s) - Pf_ref(:))'*(pf((1+24*user*(s-1)):24*user*s) - Pf_ref(:));
 cost_pc(s) = D*gamma_pc*prob(s)*(pc((1+24*user*(s-1)):24*user*s) - Pc_ref(:))'*(pc((1+24*user*(s-1)):24*user*s) - Pc_ref(:));
-cost_pac(s) = D*gamma_pac*prob(s)*(tin((1+24*user*(s-1)):24*user*s) - ones(24*user,1)*Tin_ref)'*(tin((1+24*user*(s-1)):24*user*s) - ones(24*user,1)*Tin_ref);
+cost_pac(s) = D*gamma_pac*prob(s)*(tin((1+24*user*(s-1)):24*user*s) - repelem(Tin_ref, 24))'*(tin((1+24*user*(s-1)):24*user*s) - repelem(Tin_ref, 24));
 cost_po(s) = D*gamma_pac*prob(s)*(pi1*sum(z((1+24*(s-1)):24*s)) + pi2*sum(zmax(s)));
 end    
 invest = [c_S*beta_S; c_W*beta_W; c_B*beta_B];
 cost = [cost_pf; cost_pc; cost_pac; cost_po];
+
