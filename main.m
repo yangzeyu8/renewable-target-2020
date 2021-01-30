@@ -93,3 +93,4 @@ M = num_user*10000000;
 [var, cost, invest] = solver(num_user, num_situation, param, Pf_ref, Pc_ref, Tin_ref, Tout, Tin0, Pil, Eb0, D, theta, Theta, M);
 save 'output/target0/results.mat'
 visualization
+compare
